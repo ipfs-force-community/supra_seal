@@ -22,3 +22,4 @@ quiet = []
 
 [build-dependencies]
 cc = { version = "^1.0.70", features = ["parallel"] }
+cmd_lib = "1.3"

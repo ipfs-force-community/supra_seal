@@ -5,10 +5,23 @@ fn main() {
 }
 
 fn groth16_cuda() {
+    let supported_sms = cmd_lib::run_fun!(
+        bash -c "nvcc --help | sed -n -e '/gpu-architecture <arch>/,/gpu-code <code>/ p' | sed -n -e '/Allowed values/,/gpu-code <code>/ p' | grep -i sm_ | grep -Eo 'sm_[0-9]+' | sed -e s/sm_//g | sort -g -u | tr '\n' ' '"
+    ).unwrap();
+    let supported_sms = supported_sms.strip_suffix(' ').unwrap().split(' ');
+
     let mut nvcc = cc::Build::new();
     nvcc.cuda(true);
-    nvcc.flag("-arch=sm_80");
-    nvcc.flag("-gencode").flag("arch=compute_70,code=sm_70");
+
+    for sm in supported_sms {
+        match sm.parse::<u32>() {
+            Ok(sm_u32) if sm_u32 >= 50 => {}
+            _ => continue,
+        }
+        nvcc.flag("-gencode")
+            .flag(format!("arch=compute_{},code=sm_{}", sm, sm).as_str());
+    }
+
     nvcc.flag("-t0");
     nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
     nvcc.define("FEATURE_BLS12_381", None);
